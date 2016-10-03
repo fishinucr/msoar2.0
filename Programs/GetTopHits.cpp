@@ -5,6 +5,7 @@
 #include <vector>
 #include <iomanip>
 #include <set>
+#include <algorithm>
 
 using namespace std;
 
