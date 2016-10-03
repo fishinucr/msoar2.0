@@ -10,6 +10,7 @@
 #include <vector>
 #include <string>
 #include <fstream>
+#include <cstring>
 #include "Genome.h"
 #include "Gene.h"
 #include "CompleteGraph.h"
