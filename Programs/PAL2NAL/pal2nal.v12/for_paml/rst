@@ -1,0 +1,10 @@
+Supplemental results for CODEML (seqf: test.codon  treef: test.tree)
+
+Number of codon sites with 0,1,2,3 position differences
+   2 vs.    1    112    50    15     0   0.5224 (0.1421 0.2721)
+
+
+pairwise comparison (Goldman & Yang 1994)
+seq seq        N       S       dN       dS     dN/dS   Paras.
+  2   1    401.4    129.6   0.1510   0.2525   0.5980   0.5272   1.9406   0.5980 -1014.258
+

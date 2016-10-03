@@ -1,0 +1,158 @@
+#!/bin/bash
+
+if [ $# != 6 ]; then
+	echo "<Usage>: MSOAR2.0 G1.pep G2.pep G1.nuc G2.nuc G1.info G2.info"
+	exit
+fi
+
+#################################################################
+##  PART 1
+#################################################################
+
+#####################################
+# Run Blastp
+# Input: G1G2.pep
+# Output: G1G2.blastp
+####################################
+cat $1 $2 > G1G2.pep
+./Programs/blast-2.2.13/bin/formatdb -p T -i G1G2.pep
+./Programs/blast-2.2.13/bin/blastall -p blastp -i G1G2.pep -d G1G2.pep -m9 -e 0.0000000001 -o G1G2.blastp
+rm -f *.pep.* *~ *.log
+#####################################
+# MCL Clustering
+# Input: G1G2.blastp
+# Output: G1G2.cluster
+#####################################
+./Programs/mcl-06-058/bin/mcxdeblast --m9 --abc-out=- --score=b --bcut=50 G1G2.blastp | ./Programs/mcl-06-058/bin/mcl - --abc -I 2.0 -o G1G2.cluster
+
+
+#################################################################
+##  PART 2
+#################################################################
+
+##################################################
+# Separate Different Gene Families
+# Input: G1G2.cluster G1.pep G2.pep G1.nuc G2.nuc
+# Output: Families/gf*.pep, gf*.nuc, gf*.pos
+##################################################
+rm -Rf Families/
+mkdir Families/
+NumOfFamilies=`./Programs/familySeparator G1G2.cluster $1 $2 $3 $4`
+######################################################################
+# Construct Gene Tree for each Family and Find inparalogs in TAGs                               
+######################################################################
+for ((i=1; i<=$NumOfFamilies; i+=1));
+do
+####################################
+# Run MAFFT
+# Input: gf1.pep
+# Output: gf1.fasta
+#####################################
+./Programs/MAFFT/bin/mafft Families/gf$i.pep > Families/gf$i.fasta
+#####################################
+#	Run PAL2NAL
+# Input: gf1.fasta
+# Output: gf1.codon
+#####################################
+./Programs/PAL2NAL/pal2nal.v12/pal2nal.pl Families/gf$i.fasta Families/gf$i.nuc -output paml > Families/gf$i.codon
+#####################################
+# Run DNAdist (use F84 model)
+# Input: gf1.codon
+# Output: gf1.dist
+#####################################
+rm -f outfile
+./Programs/mapToPhylip Families/gf$i.codon gf$i.codon gf$i.map
+./Programs/phylip-3.67/exe/dnadist << END1
+gf$i.codon
+I
+2
+Y
+END1
+./Programs/addOutgroup outfile > gf$i.dist
+rm -f outfile gf$i.codon
+#####################################
+# Run BIONJ
+# Input: gf1.dist
+# Output: gf1.tree
+#####################################
+./Programs/phylip-3.67/exe/BIONJ-LINUX << END2
+gf$i.dist
+outtree
+END2
+./Programs/treeTran 0000000000 outtree > gf$i.tree
+rm -f outtree
+#####################################
+# Tag generator
+# Input: gf$i.tree gf$i.pos gf$i.map
+# Output: TAGs (single file)
+#####################################
+./Programs/tagGenerator gf$i.tree Families/gf$i.pos gf$i.map gf$i.tags
+#####################################
+# Move files
+#####################################
+mv gf$i.dist Families/
+mv gf$i.map Families/
+mv gf$i.tree Families/
+mv gf$i.tags Families/
+done
+rm -f TAGs 
+
+if [ $NumOfFamilies -ne 0 ]; then
+	cat Families/gf*.tags > TAGs
+else
+	touch TAGs
+fi
+
+#################################################################
+##  PART 3
+#################################################################
+
+################################################
+# Remove Inparalogs in TAGs and Invoke MSOAR
+# Input: TAGs G1G2.blastp
+# Output: msoar_result
+################################################
+./Programs/getTopHits G1G2.blastp 50 1.0 0.5 5 G1ToG2.top G2ToG1.top $5 $6
+./Programs/removeInparalogs TAGs G1ToG2.top
+./Programs/removeInparalogs TAGs G2ToG1.top
+./tools/cutbyname.pl -f 1,2,4,3 G1ToG2.top|sort -k1,2 -u > hm_bh_top
+./tools/cutbyname.pl -f 1,2,4,3 G2ToG1.top|sort -k1,2 -u > mh_bh_top
+./tools/joinby.pl $5 1 hm_bh_top 1 > hm
+./tools/joinby.pl $6 1 mh_bh_top 1 > mh
+./tools/sortposition_whole.pl hm >hm_pos
+./tools/sortposition_whole.pl mh >mh_pos
+./tools/joinby.pl -o hm 6 mh_pos 2 > hm_s
+./tools/joinby.pl hm_s 2 hm_pos 2 >hm_ss
+./tools/cutbyname.pl -f 10,1,3-6,9,7-8 hm_ss > hm_whole
+sort -k1n hm_whole > hm_msoar
+./tools/joinby.pl -o mh 6 hm_pos 2 > mh_s
+./tools/joinby.pl mh_s 2 mh_pos 2 > mh_ss
+./tools/cutbyname.pl -f 10,1,3-6,9,7-8 mh_ss > mh_whole
+sort -k1n mh_whole >mh_msoar
+sort -u hm_msoar>hm_msoar_u
+sort -u mh_msoar>mh_msoar_u
+sort -k1n mh_msoar_u >mh_msoar
+sort -k1n hm_msoar_u >hm_msoar
+./Programs/MSOAR/MSOAR hm_msoar mh_msoar pre_res msoar_output
+./tools/cutbyname.pl -f 1,3 msoar_output > msoar_result
+rm -f hg* mm* hm* mh* pre_res msoar_output
+
+#################################################################
+##  PART 4
+#################################################################
+
+################################################
+# Post-processing
+# Input: msoar_result G1.info G2.info
+# Output: MSOAR2_result
+################################################
+./Programs/normalizeScores G1ToG2.top > G1ToG2.score
+./Programs/normalizeScores G2ToG1.top > G2ToG1.score
+./Programs/postprocessing $5 $6 msoar_result G1ToG2.score G2ToG1.score 1.0 > MSOAR2_result
+rm -Rf Results/
+mkdir Results/
+mv G1*G2* Results/
+mv G2*G1* Results/
+mv TAGs Results/
+mv msoar_result Results/
+cp MSOAR2_result Results/
