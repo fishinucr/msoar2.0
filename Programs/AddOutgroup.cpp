@@ -14,10 +14,10 @@ int main(int argc, char** argv)
 	int n;
 	infile >> n;
 	n++;
-	vector <vector<double> > v(n, n);
+    // initialize nXn matrix to 0 values
+	vector < vector<double> > v( n, vector<double>(n, 0) );
 	vector <string> vn(n);
 	vn[0] = "0000000000";
-	v[0][0]=0.0;
 
 	double maxv=0.0;
 	for(int i=1; i<n; i++)
