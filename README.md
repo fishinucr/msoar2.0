@@ -1,14 +1,7 @@
-#****************************************************************
-#                                                               #
-#             MSOAR 2.0 Ortholog Assignment System              #
-#                  (version 2.0, Oct 29, 2009)                  #
-#                                                               # 
-#****************************************************************
+# MSOAR 2.0 Ortholog Assignment System
+## version 2.0, Oct 29, 2009
 
-
-#********************************
-#    What is MSOAR and MSOAR 2.0
-#********************************
+# What is MSOAR and MSOAR 2.0
 
 MSOAR is a high-throughput system for assigning orthologs between
 closely related species on a genome scale. It attempts to reconstruct
@@ -27,9 +20,7 @@ through a post-processing step to further improve the prediction accuracy of
 the output ortholog pairs.
 
 
-#******************
-#    Reference
-#******************
+# Reference
 
 If you use MSOAR 2.0, please cite the following paper:
 
@@ -40,9 +31,7 @@ Guanqun Shi, Liqing Zhang, Tao Jiang (2009)
 ```
 
 
-#****************************
-#    Directories and Files
-#****************************
+# Directories and Files
 
 Directory:   Programs/   Software and programs used in the pipeline of MSOAR 2.0
 Directory:   tools/      Tools used in MSOAR 2.0
@@ -101,25 +90,27 @@ G1.info   Genome1   gene        positional information
 G2.info   Genome2   gene        positional information
 ```
 
-File Format:
+## File Format:
 
+### \*.pep files (G1.pep):
 ```
-*.pep files (G1.pep):
 >gene_id
 MVTEFIFLGLSDSQELQTFLFMLFFVFYGG
+```
 
-*.nuc files (G1.nuc):
+### \*.nuc files (G1.nuc):
+```
 >gene_id
 ATGGTGACTGAATTCATTTTTCTGGGTCTCTCTGATTCTCAGGAACTCCAGACCTTCCTATTTATGTTGTTTTTTGTAT
+```
 
-*.info files:
+### \*.info files:
+```
 gene_id        gene_symbol        chromosome        sign        start_position
 ```
 
 
-#******************************
-#    How to run MSOAR 2.0
-#******************************
+# How to run MSOAR 2.0
 
 MSOAR 2.0 is written on the platform of Linux and tested on Linux (version 
 CentOS-5), we haven't tested it on other platforms. So it is better for the 
@@ -183,11 +174,11 @@ $ MSOAR2.0 G1.pep G2.pep G1.nuc G2.nuc G1.info G2.info
 To run MSOAR 2.0, the MSOAR2.0 script needs six input data files, which are
 described below:
 
- - G1.pep and G2.pep are the input peptide sequence files for each genome.
+ - `G1.pep` and `G2.pep` are the input peptide sequence files for each genome.
 
- - G1.nuc and G2.nuc are the corresponding nucleotide sequence files for each genome.
+ - `G1.nuc` and `G2.nuc` are the corresponding nucleotide sequence files for each genome.
 
- - G1.info and G2.info are files containing positional information of genes on each genome.
+ - `G1.info` and `G2.info` are files containing positional information of genes on each genome.
 
 Formats of the input files are described in the Examples/ section, and examples are 
 given in the directory Examples/.
@@ -196,16 +187,12 @@ The output of MSOAR 2.0 is stored in the file MSOAR2_result after running the sc
 
 
 
-#*******************************************
-#    MSOAR 2.0 Website
-#*******************************************
+# MSOAR 2.0 Website
 
 http://msoar.cs.ucr.edu/MSOAR2.0/
 
 
-#*******************************************
-#    Contact Info
-#*******************************************
+# Contact Info
 
 If you have any questions or comments about MSOAR 2.0, please contact me at:
 
