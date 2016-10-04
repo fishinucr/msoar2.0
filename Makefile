@@ -21,8 +21,8 @@ DNADIST       = $(PHYLIP_EXE)/dnadist
 
 MSOAR_DIR = Programs/MSOAR
 
-all: blast mcl $(MAFFT) $(PAL2NAL) $(DNADIST)
-	[[ ! -z `type -P blastall` || -f $(BLAST_DIR)/bin/blastall ]] && ${MAKE} blast
+all: $(MAFFT) $(PAL2NAL) $(DNADIST)
+	[[ ! -z `type -P blastall` || -f $(BLAST_DIR)/bin/blastall ]] || ${MAKE} blast
 	${MAKE} mcl
 	cd Programs && ${MAKE}
 	cd $(MSOAR_DIR) && ${MAKE}
@@ -54,7 +54,12 @@ mcl:
 	echo "Building MCL" > /dev/stderr
 	cd $(MCL_DIR) && ${MAKE}
 
-.PHONY: clean
+.PHONY: runclean
+runclean:
+	rm -f *.codon outfile *.map *.blastp *.cluster *.pep
+	rm -rf Families
+
+.PHONY: distclean
 clean:
 	rm -rf $(BLAST_DIR)
 	cd Programs          && ${MAKE} clean
