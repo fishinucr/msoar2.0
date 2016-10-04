@@ -16,8 +16,9 @@ fi
 ####################################
 cat $1 $2 > G1G2.pep
 ./Programs/blast-2.2.13/bin/formatdb -p T -i G1G2.pep
-./Programs/blast-2.2.13/bin/blastall -p blastp -i G1G2.pep -d G1G2.pep -m9 -e 0.0000000001 -o G1G2.blastp
+./Programs/blast-2.2.13/bin/blastall -p blastp -i G1G2.pep -d G1G2.pep -m9 -e 1e-10 -o G1G2.blastp
 rm -f *.pep.* *~ *.log
+
 #####################################
 # MCL Clustering
 # Input: G1G2.blastp
@@ -38,63 +39,68 @@ rm -f *.pep.* *~ *.log
 rm -Rf Families/
 mkdir Families/
 NumOfFamilies=`./Programs/familySeparator G1G2.cluster $1 $2 $3 $4`
+
 ######################################################################
 # Construct Gene Tree for each Family and Find inparalogs in TAGs                               
 ######################################################################
 for ((i=1; i<=$NumOfFamilies; i+=1));
 do
-####################################
-# Run MAFFT
-# Input: gf1.pep
-# Output: gf1.fasta
-#####################################
-./Programs/MAFFT/bin/mafft Families/gf$i.pep > Families/gf$i.fasta
-#####################################
-#	Run PAL2NAL
-# Input: gf1.fasta
-# Output: gf1.codon
-#####################################
-./Programs/PAL2NAL/pal2nal.v12/pal2nal.pl Families/gf$i.fasta Families/gf$i.nuc -output paml > Families/gf$i.codon
-#####################################
-# Run DNAdist (use F84 model)
-# Input: gf1.codon
-# Output: gf1.dist
-#####################################
-rm -f outfile
-./Programs/mapToPhylip Families/gf$i.codon gf$i.codon gf$i.map
-./Programs/phylip-3.67/exe/dnadist << END1
+    ####################################
+    # Run MAFFT
+    # Input: gf1.pep
+    # Output: gf1.fasta
+    #####################################
+    ./Programs/MAFFT/bin/mafft Families/gf$i.pep > Families/gf$i.fasta
+
+    #####################################
+    #	Run PAL2NAL
+    # Input: gf1.fasta
+    # Output: gf1.codon
+    #####################################
+    ./Programs/PAL2NAL/pal2nal.v12/pal2nal.pl Families/gf$i.fasta Families/gf$i.nuc -output paml > Families/gf$i.codon
+
+    #####################################
+    # Run DNAdist (use F84 model)
+    # Input: gf1.codon
+    # Output: gf1.dist
+    #####################################
+
+    rm -f outfile
+    ./Programs/mapToPhylip Families/gf$i.codon gf$i.codon gf$i.map
+    ./Programs/phylip-3.67/exe/dnadist << END1
 gf$i.codon
 I
 2
 Y
 END1
-./Programs/addOutgroup outfile > gf$i.dist
-rm -f outfile gf$i.codon
-#####################################
-# Run BIONJ
-# Input: gf1.dist
-# Output: gf1.tree
-#####################################
-./Programs/phylip-3.67/exe/BIONJ-LINUX << END2
+    ./Programs/addOutgroup outfile > gf$i.dist
+    rm -f outfile gf$i.codon
+    #####################################
+    # Run BIONJ
+    # Input: gf1.dist
+    # Output: gf1.tree
+    #####################################
+    ./Programs/phylip-3.67/exe/BIONJ-LINUX << END2
 gf$i.dist
 outtree
 END2
-./Programs/treeTran 0000000000 outtree > gf$i.tree
-rm -f outtree
-#####################################
-# Tag generator
-# Input: gf$i.tree gf$i.pos gf$i.map
-# Output: TAGs (single file)
-#####################################
-./Programs/tagGenerator gf$i.tree Families/gf$i.pos gf$i.map gf$i.tags
-#####################################
-# Move files
-#####################################
-mv gf$i.dist Families/
-mv gf$i.map Families/
-mv gf$i.tree Families/
-mv gf$i.tags Families/
+    ./Programs/treeTran 0000000000 outtree > gf$i.tree
+    rm -f outtree
+    #####################################
+    # Tag generator
+    # Input: gf$i.tree gf$i.pos gf$i.map
+    # Output: TAGs (single file)
+    #####################################
+    ./Programs/tagGenerator gf$i.tree Families/gf$i.pos gf$i.map gf$i.tags
+    #####################################
+    # Move files
+    #####################################
+    mv gf$i.dist Families/
+    mv gf$i.map Families/
+    mv gf$i.tree Families/
+    mv gf$i.tags Families/
 done
+
 rm -f TAGs 
 
 if [ $NumOfFamilies -ne 0 ]; then
