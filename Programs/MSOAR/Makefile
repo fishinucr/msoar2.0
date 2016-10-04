@@ -23,5 +23,6 @@ CompleteGraph.o: CompleteGraph.cc CompleteGraph.h Graph.h Genome.h VertexPair.h
 PairmatchGraph.o: PairmatchGraph.cc PairmatchGraph.h Graph.h Genome.h VertexPair.h
 	$(CC) $(FLAGS) -c PairmatchGraph.cc
 
+.PHONY: clean
 clean: 
 	rm -rf *.o *~ MSOAR

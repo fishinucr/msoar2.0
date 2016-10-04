@@ -38,5 +38,6 @@ normalizeScores:
 tagGenerator:
 	$(CC) $(FLAGS) TagGenerator.cpp -o tagGenerator
 
+.PHONY: clean
 clean: 
 	rm -f *~ mapToPhylip familySeparator addOutgroup getTopHits postprocessing removeInparalogs normalizeScores tagGenerator treeTran

@@ -1,0 +1,127 @@
+#! /bin/csh -f
+
+#
+# Edit pscoffee.tmpl, not pscoffee.
+#
+
+cat << ENDF > _lara2pairalign
+#! /usr/bin/env ruby
+
+gets
+line = gets
+nseq = line.to_i
+gets
+
+seq = []
+len = []
+for i in 0..(nseq-1)
+	line = gets
+	seq.push( line.split(' ').slice(2).to_s )
+	len.push( line.split(' ').slice(1).to_i )
+	gets
+end
+
+#p seq
+#p len
+
+while 1 
+	line = gets
+	mem1 = line.split(' ').slice(1).to_i - 1
+	mem2 = line.split(' ').slice(2).to_i - 1
+
+#	p mem1
+#	p mem2
+
+	gets
+
+	aln1 = ""
+	aln2 = ""
+
+	pos1bk = len[mem1] - 1
+	pos2bk = len[mem2] - 1
+
+	while 1
+		line = gets
+		pos1 = line.split(' ').slice(0).to_i - 1
+		pos2 = line.split(' ').slice(1).to_i - 1
+
+		break if line.to_i == 0
+
+#		puts "\npos = \n"
+#		p pos1
+#		p pos2
+
+		next if pos1 == 0 && pos2 == 0
+
+		if pos1bk > pos1 then
+			j = pos1bk
+			while j > pos1
+#				puts "j1= " + j.to_s
+				aln1 = seq[mem1][j..j] + aln1
+				aln2 = '-' + aln2
+				j -= 1
+			end
+		end
+		if pos2bk > pos2 then
+			j = pos2bk
+			while j > pos2
+#				puts "j2= " + j.to_s
+				aln1 = '-' + aln1
+				aln2 = seq[mem2][j..j] + aln2
+				j -= 1
+			end
+		end
+
+
+		aln1 = seq[mem1][pos1..pos1] + aln1
+		aln2 = seq[mem2][pos2..pos2] + aln2
+
+#		puts "\nadding nuc"
+#		p aln1
+#		p aln2
+
+		pos1bk = pos1-1
+		pos2bk = pos2-1
+
+#		puts "\nposbk = \n"
+#		p pos1bk
+#		p pos2bk
+
+	end
+	if pos1bk >= 0 then
+		j = pos1bk
+		while j >= 0
+			aln1 = seq[mem1][j..j] + aln1
+			aln2 = '-' + aln2
+			j -= 1
+		end
+	end
+	if pos2bk >= 0 then
+		j = pos2bk
+		while j >= 0
+			aln1 = '-' + aln1
+			aln2 = seq[mem2][j..j] + aln2
+			j -= 1
+		end
+	end
+
+	puts ">#{mem1}"
+	puts aln1
+	puts ">#{mem2}"
+	puts aln2
+
+
+	break if line =~ /^!/ 
+end
+exit
+
+ENDF
+
+chmod guo+rx _lara2pairalign
+
+echo "####### IN PSCOFFEE ######" 
+
+set fname = `echo $1 | sed 's/-in=//'`
+cp $fname larapairs.$$
+./_lara2pairalign larapairs.$$ > larapairs
+rm larapairs.$$

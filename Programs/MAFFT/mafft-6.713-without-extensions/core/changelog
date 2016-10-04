@@ -1,0 +1,12 @@
+03/04/09 mafft: sed 's/\r/\n/g' を追加 (cygwin用)
+03/04/09 fftnsi, nwnsi: nj option を追加
+03/05/20 command mode でも windows の改行コード \r に対応
+
+03/07/19 penalty_ex を削除 → スピードアップ
+
+03/07/22 conjuction() -> 表示の長さを制限。
+03/07/22 fftns, fftnsi, nwns, nwnsi: sed の変わりにtrで改行コード変換
+03/12/05 スクリプト全部: ディレクトリにスペースがある場合に対応。
+
+05/12/02 mafft.tmpl, stderr, stdout
+05/12/02 Salignmm.c, partSalignmm.c, 1 zai no localhom

@@ -1,0 +1,274 @@
+#include "mltaln.h"
+
+#define DEBUG 0
+
+static char *whereismccaskillmea;
+
+void outmccaskill( FILE *fp, RNApair **pairprob, int length )
+{
+	int i;
+	RNApair *pt;
+	for( i=0; i<length; i++ ) for( pt=pairprob[i]; pt->bestpos!=-1; pt++ )
+	{
+		if( pt->bestpos > i ) 
+			fprintf( fp, "%d %d %50.40f\n", i, pt->bestpos, pt->bestscore );
+	}
+}
+
+#if 1
+static void readrawmccaskill( FILE *fp, RNApair **pairprob, int length )
+{
+	char gett[1000];
+	int *pairnum;
+	int i;
+	int left, right;
+	float prob;
+
+	pairnum = (int *)calloc( length, sizeof( int ) );
+	for( i=0; i<length; i++ ) pairnum[i] = 0;
+
+	while( 1 )
+	{
+		fgets( gett, 999, fp );
+		if( feof( fp ) ) break;
+		if( gett[0] == '>' ) continue;
+		sscanf( gett, "%d %d %f", &left, &right, &prob );
+		if( prob < 0.01 ) continue; // mxscarna to mafft ryoho ni eikyou
+//fprintf( stderr, "gett = %s\n", gett );
+
+		if( left != right && prob > 0.0 )
+		{
+			pairprob[left] = (RNApair *)realloc( pairprob[left], (pairnum[left]+2) * sizeof( RNApair ) );
+			pairprob[left][pairnum[left]].bestscore = prob;
+			pairprob[left][pairnum[left]].bestpos = right;
+			pairnum[left]++;
+			pairprob[left][pairnum[left]].bestscore = -1.0;
+			pairprob[left][pairnum[left]].bestpos = -1;
+//			fprintf( stderr, "%d-%d, %f\n", left, right, prob );
+
+			pairprob[right] = (RNApair *)realloc( pairprob[right], (pairnum[right]+2) * sizeof( RNApair ) );
+			pairprob[right][pairnum[right]].bestscore = prob;
+			pairprob[right][pairnum[right]].bestpos = left;
+			pairnum[right]++;
+			pairprob[right][pairnum[right]].bestscore = -1.0;
+			pairprob[right][pairnum[right]].bestpos = -1;
+//			fprintf( stderr, "%d-%d, %f\n", right, left, prob );
+		}
+	}
+	free( pairnum );
+}
+#endif
+
+void arguments( int argc, char *argv[] )
+{
+    int c;
+	inputfile = NULL;
+	dorp = NOTSPECIFIED;
+	kimuraR = NOTSPECIFIED;
+	pamN = NOTSPECIFIED;
+	whereismccaskillmea = NULL;
+
+    while( --argc > 0 && (*++argv)[0] == '-' )
+	{
+        while ( (c = *++argv[0]) )
+		{
+            switch( c )
+            {
+				case 'i':
+					inputfile = *++argv;
+					fprintf( stderr, "inputfile = %s\n", inputfile );
+					--argc;
+					goto nextoption;
+				case 'd':
+					whereismccaskillmea = *++argv;
+					fprintf( stderr, "whereismccaskillmea = %s\n", whereismccaskillmea );
+					--argc;
+					goto nextoption;
+                default:
+                    fprintf( stderr, "illegal option %c\n", c );
+                    argc = 0;
+                    break;
+            }
+		}
+		nextoption:
+			;
+	}
+    if( argc != 0 ) 
+    {
+        fprintf( stderr, "options: Check source file !\n" );
+        exit( 1 );
+    }
+}
+
+
+int main( int argc, char *argv[] )
+{
+	static char com[10000];
+	static int  *nlen;	
+	int left, right;
+	int res;
+	static char **name, **seq, **nogap;
+	static int **gapmap;
+	static int *order;
+	int i, j;
+	FILE *infp;
+	RNApair ***pairprob;
+	RNApair **alnpairprob;
+	RNApair *pairprobpt;
+	RNApair *pt;
+	int *alnpairnum;
+	float prob;
+	int adpos;
+
+	arguments( argc, argv );
+
+	if( inputfile )
+	{
+		infp = fopen( inputfile, "r" );
+		if( !infp )
+		{
+			fprintf( stderr, "Cannot open %s\n", inputfile );
+			exit( 1 );
+		}
+	}
+	else
+		infp = stdin;
+
+	if( !whereismccaskillmea )
+		whereismccaskillmea = "";
+
+	getnumlen( infp );
+	rewind( infp );
+
+	if( dorp != 'd' )
+	{
+		fprintf( stderr, "nuc only\n" );
+		exit( 1 );
+	}
+
+	seq = AllocateCharMtx( njob, nlenmax*2+1 );
+	nogap = AllocateCharMtx( njob, nlenmax*2+1 );
+	gapmap = AllocateIntMtx( njob, nlenmax*2+1 );
+	order = AllocateIntVec( njob );
+	name = AllocateCharMtx( njob, B+1 );
+    nlen = AllocateIntVec( njob );
+	pairprob = (RNApair ***)calloc( njob, sizeof( RNApair ** ) );
+	alnpairprob = (RNApair **)calloc( nlenmax, sizeof( RNApair * ) );
+	alnpairnum = AllocateIntVec( nlenmax );
+
+	for( i=0; i<nlenmax; i++ ) alnpairnum[i] = 0;
+
+	readData_pointer( infp, name, nlen, seq );
+	fclose( infp );
+
+	for( i=0; i<njob; i++ )
+	{
+		pairprob[i] = (RNApair **)calloc( nlenmax, sizeof( RNApair * ) );
+		for( j=0; j<nlenmax; j++ )
+		{
+			pairprob[i][j] = (RNApair *)calloc( 1, sizeof( RNApair ) );
+			pairprob[i][j][0].bestpos = -1;
+			pairprob[i][j][0].bestscore = -1.0;
+		}
+		strcpy( nogap[i], seq[i] );
+		order[i] = i;
+	}
+	for( j=0; j<nlenmax; j++ )
+	{
+		alnpairprob[j] = (RNApair *)calloc( 1, sizeof( RNApair ) );
+		alnpairprob[j][0].bestpos = -1;
+		alnpairprob[j][0].bestscore = -1.0;
+	}
+
+
+	constants( njob, seq );
+
+	fprintf( stderr, "Running mxscarna with the mccaskill_mea mode.\n" );
+	for( i=0; i<njob; i++ )
+	{
+		fprintf( stderr, "%d / %d\n", i+1, njob );
+		commongappick_record( 1, nogap+i, gapmap[i] );
+		infp = fopen( "_mccaskillinorg", "w" );
+//		fprintf( infp, ">in\n%s\n", nogap[i] );
+		fprintf( infp, ">in\n" );
+		write1seq( infp, nogap[i] );
+		fclose( infp );
+
+		system( "tr -d '\\r' < _mccaskillinorg > _mccaskillin" ); // for cygwin, wakaran
+		sprintf( com, "env PATH=%s mxscarnamod -m -writebpp  _mccaskillin > _mccaskillout 2>_dum", whereismccaskillmea );
+		res = system( com );
+
+		if( res )
+		{
+			fprintf( stderr, "ERROR IN mccaskill_mea\n" );
+			exit( 1 );
+		}
+
+		infp = fopen( "_mccaskillout", "r" );
+		readrawmccaskill( infp, pairprob[i], nlenmax );
+		fclose( infp );
+		fprintf( stdout, ">%d\n", i );
+		outmccaskill( stdout, pairprob[i], nlenmax );
+	}
+
+	for( i=0; i<njob; i++ )
+	{
+		for( j=0; j<nlen[i]; j++ ) for( pairprobpt=pairprob[i][j]; pairprobpt->bestpos!=-1; pairprobpt++ )
+		{
+			left = gapmap[i][j];
+			right = gapmap[i][pairprobpt->bestpos];
+			prob = pairprobpt->bestscore;
+
+			for( pt=alnpairprob[left]; pt->bestpos!=-1; pt++ )
+				if( pt->bestpos == right ) break;
+
+			if( pt->bestpos == -1 )
+			{
+				alnpairprob[left] = (RNApair *)realloc( alnpairprob[left], (alnpairnum[left]+2) * sizeof( RNApair ) );
+				adpos = alnpairnum[left];
+				alnpairnum[left]++;
+				alnpairprob[left][adpos].bestscore = 0.0;
+				alnpairprob[left][adpos].bestpos = right;
+				alnpairprob[left][adpos+1].bestscore = -1.0;
+				alnpairprob[left][adpos+1].bestpos = -1;
+				pt = alnpairprob[left]+adpos;
+			}
+			else
+				adpos = pt-alnpairprob[left];
+
+			pt->bestscore += prob;
+			if( pt->bestpos != right )
+			{
+				fprintf( stderr, "okashii!\n" );
+				exit( 1 );
+			}
+//			fprintf( stderr, "adding %d-%d, %f\n", left, right, prob );
+		}
+	}
+
+	for( i=0; i<njob; i++ )
+	{
+		for( j=0; j<nlenmax; j++ ) free( pairprob[i][j] );
+		free( pairprob[i] );
+	}
+	free( pairprob );
+	for( j=0; j<nlenmax; j++ ) free( alnpairprob[j] );
+	free( alnpairprob );
+	free( alnpairnum );
+	return( 0 );
+
+#if 0
+	fprintf( stdout, "result=\n" );
+
+	for( i=0; i<nlenmax; i++ ) for( pairprobpt=alnpairprob[i]; pairprobpt->bestpos!=-1; pairprobpt++ )
+	{
+		pairprobpt->bestscore /= (float)njob;
+		left = i;
+		right = pairprobpt->bestpos;
+		prob = pairprobpt->bestscore;
+		fprintf( stdout, "%d-%d, %f\n", left, right, prob );
+	}
+
+	return( 0 );
+#endif
+}
